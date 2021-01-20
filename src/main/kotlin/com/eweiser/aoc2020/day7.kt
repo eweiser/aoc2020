@@ -2,13 +2,18 @@ package main.kotlin.com.eweiser.aoc2020
 
 fun main(args:Array<String>) {
     val input = {}.javaClass.enclosingClass.getResource("/day7.txt").readText().lines()
-    val bagGraph = buildBagGraph(input)
-    println(getChildNodes(bagGraph, "shiny gold").size)
+
+    val childToParentBagGraph = buildBagGraph(input, false)
+    println(getChildNodes(childToParentBagGraph, "shiny gold").size)
+
+    val parentToChildBagGraph = buildBagGraph(input, true)
+    println(getNumBagsContained(parentToChildBagGraph, "shiny gold"))
 }
 
-data class BagNode(val color: String, val containerBags: MutableList<Pair<BagNode, Int>>)
+data class BagEdge(val bag: BagNode, val num: Int)
+data class BagNode(val color: String, val adjacentBags: MutableList<BagEdge>)
 
-fun buildBagGraph(input: List<String>): Map<String, BagNode> {
+fun buildBagGraph(input: List<String>, parentToChild: Boolean): Map<String, BagNode> {
     val nodeMap = mutableMapOf<String, BagNode>()
     val childBagDescriptorPattern = Regex("(\\d+) ([a-zA-Z\\s]+) bags?\\.?")
     for (line in input) {
@@ -25,7 +30,11 @@ fun buildBagGraph(input: List<String>): Map<String, BagNode> {
             }
             val (_, num, childBagColor) = childBagDescriptorPattern.find(childBagDescriptor)!!.groupValues
             val childBagNode = nodeMap.getOrPut(childBagColor) { BagNode(childBagColor, mutableListOf()) }
-            childBagNode.containerBags += Pair(parentBagNode, num.toInt())
+            if (parentToChild) {
+                parentBagNode.adjacentBags += BagEdge(childBagNode, num.toInt())
+            } else {
+                childBagNode.adjacentBags += BagEdge(parentBagNode, num.toInt())
+            }
         }
     }
 
@@ -40,6 +49,14 @@ fun getChildNodes(nodeMap: Map<String, BagNode>, rootColor: String): Set<String>
 }
 
 fun traverseChildNodes(nodeMap: Map<String, BagNode>, root: BagNode, visited: MutableSet<String>) {
-    visited.addAll(root.containerBags.map { it.first.color })
-    root.containerBags.map { traverseChildNodes(nodeMap, it.first, visited) }
+    visited.addAll(root.adjacentBags.map { it.bag.color })
+    root.adjacentBags.map { traverseChildNodes(nodeMap, it.bag, visited) }
+}
+
+fun getNumBagsContained(nodeMap: Map<String, BagNode>, rootColor: String): Int {
+    val root = nodeMap[rootColor]
+    return getNumBagsInvolved(nodeMap, root!!) - 1
+}
+fun getNumBagsInvolved(nodeMap: Map<String, BagNode>, root: BagNode): Int {
+    return 1 + root.adjacentBags.map { it.num * getNumBagsInvolved(nodeMap, it.bag) }.sum()
 }
