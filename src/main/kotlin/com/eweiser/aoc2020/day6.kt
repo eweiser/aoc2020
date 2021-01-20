@@ -1,7 +1,6 @@
 package main.kotlin.com.eweiser.aoc2020
 
 fun main(args:Array<String>) {
-    val initGroupAnswerSet = "abcdefghijklmnopqrstuvwxyz".toCharArray().toSet()
     val input = {}.javaClass.enclosingClass.getResource("/day6.txt").readText().lines()
 
     println(getNumGroupYesAnswersUnion(input))
